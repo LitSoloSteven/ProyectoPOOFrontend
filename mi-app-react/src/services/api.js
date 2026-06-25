@@ -48,6 +48,17 @@ export async function loginEstudiante(cif) {
 }
 
 /**
+ * Registra un estudiante en el sistema y retorna su ID
+ * Mapeado a AutenticacionREST.registrarEstudiante(payload)
+ */
+export async function registrarEstudiante(payload) {
+  return request('/api/auth/registrar', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * Login administrativo (psicólogo evaluador).
  * Mapeado a AutenticacionService.loginAdministrativo(cif, contrasena)
  */

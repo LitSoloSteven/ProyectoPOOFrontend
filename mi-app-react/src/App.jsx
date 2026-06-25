@@ -23,8 +23,6 @@ export default function App() {
   /** Callback: login exitoso → iniciar prueba */
   const handleLoginSuccess = (est) => {
     setEstudiante(est);
-    // En producción se llamaría a iniciarPrueba(est.id) y se usaría el ID real
-    setPruebaId('demo-prueba-001');
     setVista('test');
   };
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { registrarEstudiante, loginAdministrativo } from '../services/api';
 import './Login.css';
 
 const ROLES = [
@@ -56,6 +57,8 @@ export default function Login({ onLoginSuccess }) {
 
   const [formData, setFormData] = useState({
     nombres: '',
+    apellidos: '',
+    email: '',
     fechaNacimiento: '',
     departamento: '',
     municipio: '',
@@ -77,6 +80,8 @@ export default function Login({ onLoginSuccess }) {
     setError('');
     setFormData({
       nombres: '',
+      apellidos: '',
+      email: '',
       fechaNacimiento: '',
       departamento: '',
       municipio: '',
@@ -102,7 +107,9 @@ export default function Login({ onLoginSuccess }) {
 
     // Validaciones comunes
     if (rolSeleccionado !== 'evaluador') {
-      if (!formData.nombres.trim()) { setError('Ingresa tus nombres completos.'); return; }
+      if (!formData.nombres.trim()) { setError('Ingresa tus nombres.'); return; }
+      if (!formData.apellidos.trim()) { setError('Ingresa tus apellidos.'); return; }
+      if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) { setError('Ingresa un correo electrónico válido.'); return; }
       if (!formData.fechaNacimiento) { setError('Selecciona tu fecha de nacimiento.'); return; }
       if (!formData.departamento.trim()) { setError('Ingresa tu departamento.'); return; }
       if (!formData.municipio.trim()) { setError('Ingresa tu municipio.'); return; }
@@ -138,6 +145,8 @@ export default function Login({ onLoginSuccess }) {
       payload = {
         ...payload,
         nombres: formData.nombres,
+        apellidos: formData.apellidos,
+        email: formData.email,
         fechaNacimiento: formData.fechaNacimiento,
         departamento: formData.departamento,
         municipio: formData.municipio,
@@ -157,13 +166,27 @@ export default function Login({ onLoginSuccess }) {
 
     console.log('📤 Datos al backend:', payload);
 
-    setTimeout(() => {
-      setLoading(false);
-      onLoginSuccess({
-        ...payload,
-        nombres: payload.nombres || payload.cif,
-      });
-    }, 800);
+    const ejecutarAutenticacion = async () => {
+      try {
+        if (rolSeleccionado === 'evaluador') {
+          const resultado = await loginAdministrativo(payload.cif, payload.contrasena);
+          onLoginSuccess({ ...resultado, rol: 'evaluador' });
+        } else {
+          const resultado = await registrarEstudiante(payload);
+          onLoginSuccess({
+            ...payload,
+            id: resultado.id,
+            nombres: resultado.nombres,
+          });
+        }
+      } catch (err) {
+        setError(err.message || 'Error de conexión con el servidor');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    ejecutarAutenticacion();
   };
 
   const rolActual = ROLES.find((r) => r.id === rolSeleccionado);
@@ -224,13 +247,25 @@ export default function Login({ onLoginSuccess }) {
               {/* Sección: Campos comunes para estudiantes */}
               {rolSeleccionado !== 'evaluador' && (
                 <>
-                  <div className="form-group">
-                    <label>Nombres y Apellidos</label>
-                    <input className="form-input" type="text" placeholder="Ej. María López Pérez" value={formData.nombres} onChange={(e) => handleChange('nombres', e.target.value)} />
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Nombres</label>
+                      <input className="form-input" type="text" placeholder="Ej. María" value={formData.nombres} onChange={(e) => handleChange('nombres', e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Apellidos</label>
+                      <input className="form-input" type="text" placeholder="Ej. López Pérez" value={formData.apellidos} onChange={(e) => handleChange('apellidos', e.target.value)} />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Fecha de Nacimiento</label>
-                    <input className="form-input" type="date" value={formData.fechaNacimiento} onChange={(e) => handleChange('fechaNacimiento', e.target.value)} />
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Correo Electrónico</label>
+                      <input className="form-input" type="email" placeholder="Ej. maria@ejemplo.com" value={formData.email} onChange={(e) => handleChange('email', e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Fecha de Nacimiento</label>
+                      <input className="form-input" type="date" value={formData.fechaNacimiento} onChange={(e) => handleChange('fechaNacimiento', e.target.value)} />
+                    </div>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
