@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import './Login.css';
 
-/* =============================================================
-   Definición de roles disponibles en el sistema BFA.
-   Cada rol tiene: id, label, sublabel e ícono SVG.
-   ============================================================= */
 const ROLES = [
   {
     id: 'universitario',
@@ -19,7 +15,7 @@ const ROLES = [
   },
   {
     id: 'egresado',
-    label: 'Egresado de Secundaria',
+    label: 'Estudiante Egresado de Secundaria',
     sublabel: 'Bachiller graduado',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -40,9 +36,9 @@ const ROLES = [
     ),
   },
   {
-    id: 'psicologo',
-    label: 'Psicólogo',
-    sublabel: 'Administrador / Evaluador',
+    id: 'evaluador',
+    label: 'Evaluador',
+    sublabel: 'Administrador del sistema',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
@@ -52,192 +48,126 @@ const ROLES = [
   },
 ];
 
-/**
- * Login.jsx — Flujo de autenticación multi-paso.
- *
- * Paso 1: Selección de rol (4 tarjetas elegantes)
- * Paso 2: Formulario condicional según el rol seleccionado
- *
- * Roles:
- *  - Universitario  → CIF (8 dígitos), Nombre, Edad, Sexo
- *  - Egresado       → Nombre, Edad, Sexo (UUID interno)
- *  - Secundaria     → Nombre, Edad, Sexo (UUID interno)
- *  - Psicólogo      → Cédula, Contraseña
- *
- * @param {function} onLoginSuccess - Callback que recibe los datos del usuario autenticado
- */
 export default function Login({ onLoginSuccess }) {
-  /* ----------------------------------------------------------
-     Estado del componente
-     ---------------------------------------------------------- */
-  const [paso, setPaso] = useState(1);           // Paso actual (1 o 2)
-  const [rolSeleccionado, setRolSeleccionado] = useState(null); // Rol elegido
+  const [paso, setPaso] = useState(1);
+  const [rolSeleccionado, setRolSeleccionado] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Campos del formulario (compartidos entre todos los roles)
   const [formData, setFormData] = useState({
+    nombres: '',
+    fechaNacimiento: '',
+    departamento: '',
+    municipio: '',
+    comunidad: '',
     cif: '',
-    nombreCompleto: '',
-    edad: '',
-    sexo: '',
-    cedula: '',
+    numeroCedula: '',
+    tipoInstitucion: '',
     contrasena: '',
   });
 
-  /* ----------------------------------------------------------
-     Handlers genéricos
-     ---------------------------------------------------------- */
-
-  /** Actualiza un campo individual del formulario */
   const handleChange = (campo, valor) => {
     setFormData((prev) => ({ ...prev, [campo]: valor }));
-    setError(''); // Limpiar error al escribir
+    setError('');
   };
 
-  /** Paso 1 → Paso 2: seleccionar rol */
   const seleccionarRol = (rolId) => {
     setRolSeleccionado(rolId);
     setError('');
-    // Limpiar campos al cambiar de rol
     setFormData({
+      nombres: '',
+      fechaNacimiento: '',
+      departamento: '',
+      municipio: '',
+      comunidad: '',
       cif: '',
-      nombreCompleto: '',
-      edad: '',
-      sexo: '',
-      cedula: '',
+      numeroCedula: '',
+      tipoInstitucion: '',
       contrasena: '',
     });
     setPaso(2);
   };
 
-  /** Paso 2 → Paso 1: volver atrás */
   const volverAPaso1 = () => {
     setPaso(1);
     setRolSeleccionado(null);
     setError('');
   };
 
-  /* ----------------------------------------------------------
-     Validación y envío
-     ---------------------------------------------------------- */
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
-    // --- Validaciones por rol ---
+    // Validaciones comunes compartidas por los 3 tipos de estudiantes
+    if (rolSeleccionado !== 'evaluador') {
+      if (!formData.nombres.trim()) { setError('Ingresa tus nombres completos.'); return; }
+      if (!formData.fechaNacimiento) { setError('Selecciona tu fecha de nacimiento.'); return; }
+      if (!formData.departamento.trim()) { setError('Ingresa tu departamento.'); return; }
+      if (!formData.municipio.trim()) { setError('Ingresa tu municipio.'); return; }
+      if (!formData.comunidad.trim()) { setError('Ingresa tu comunidad/barrio.'); return; }
+    }
+
+    // Validaciones específicas
     if (rolSeleccionado === 'universitario') {
-      // CIF: exactamente 8 dígitos numéricos
-      if (!/^\d{8}$/.test(formData.cif)) {
-        setError('El CIF debe tener exactamente 8 dígitos numéricos (ej. 25010756).');
-        return;
-      }
-      if (!formData.nombreCompleto.trim()) {
-        setError('Ingresa tu nombre completo.');
-        return;
-      }
-      if (!formData.edad || parseInt(formData.edad) < 15 || parseInt(formData.edad) > 80) {
-        setError('Ingresa una edad válida (entre 15 y 80 años).');
-        return;
-      }
-      if (!formData.sexo) {
-        setError('Selecciona tu sexo.');
-        return;
-      }
+      if (!/^\d{8}$/.test(formData.cif)) { setError('El CIF debe tener exactamente 8 dígitos.'); return; }
+      if (!formData.numeroCedula.trim()) { setError('Ingresa tu número de cédula.'); return; }
+    } else if (rolSeleccionado === 'egresado') {
+      if (!formData.numeroCedula.trim()) { setError('Ingresa tu número de cédula.'); return; }
+      if (!formData.tipoInstitucion) { setError('Selecciona el tipo de institución.'); return; }
+    } else if (rolSeleccionado === 'secundaria') {
+      if (!formData.tipoInstitucion) { setError('Selecciona el tipo de institución.'); return; }
+    } else if (rolSeleccionado === 'evaluador') {
+      if (!formData.cif.trim()) { setError('Ingresa tu CIF / Cédula.'); return; }
+      if (!formData.contrasena) { setError('Ingresa tu contraseña.'); return; }
     }
 
-    if (rolSeleccionado === 'egresado' || rolSeleccionado === 'secundaria') {
-      if (!formData.nombreCompleto.trim()) {
-        setError('Ingresa tu nombre completo.');
-        return;
-      }
-      if (!formData.edad || parseInt(formData.edad) < 12 || parseInt(formData.edad) > 80) {
-        setError('Ingresa una edad válida (entre 12 y 80 años).');
-        return;
-      }
-      if (!formData.sexo) {
-        setError('Selecciona tu sexo.');
-        return;
-      }
-    }
-
-    if (rolSeleccionado === 'psicologo') {
-      if (!formData.cedula.trim()) {
-        setError('Ingresa tu número de cédula.');
-        return;
-      }
-      if (!formData.contrasena) {
-        setError('Ingresa tu contraseña.');
-        return;
-      }
-    }
-
-    // --- Empaquetar datos según el rol ---
     setLoading(true);
 
     let payload = { rol: rolSeleccionado };
 
-    if (rolSeleccionado === 'universitario') {
+    if (rolSeleccionado === 'evaluador') {
+      payload = { ...payload, cif: formData.cif, contrasena: formData.contrasena };
+    } else {
       payload = {
         ...payload,
-        cif: formData.cif,
-        nombreCompleto: formData.nombreCompleto.trim(),
-        edad: parseInt(formData.edad),
-        sexo: formData.sexo,
+        nombres: formData.nombres,
+        fechaNacimiento: formData.fechaNacimiento,
+        departamento: formData.departamento,
+        municipio: formData.municipio,
+        comunidad: formData.comunidad,
       };
-    } else if (rolSeleccionado === 'egresado' || rolSeleccionado === 'secundaria') {
-      // El backend asignará un UUID interno, no se pide CIF
-      payload = {
-        ...payload,
-        nombreCompleto: formData.nombreCompleto.trim(),
-        edad: parseInt(formData.edad),
-        sexo: formData.sexo,
-      };
-    } else if (rolSeleccionado === 'psicologo') {
-      payload = {
-        ...payload,
-        cedula: formData.cedula.trim(),
-        contrasena: formData.contrasena,
-      };
+      if (rolSeleccionado === 'universitario') {
+        payload = { ...payload, cif: formData.cif, numeroCedula: formData.numeroCedula };
+      }
+      if (rolSeleccionado === 'egresado') {
+        payload = { ...payload, numeroCedula: formData.numeroCedula, tipoInstitucion: formData.tipoInstitucion };
+      }
+      if (rolSeleccionado === 'secundaria') {
+        payload = { ...payload, tipoInstitucion: formData.tipoInstitucion };
+      }
     }
 
-    // --- Simular envío al backend ---
-    console.log('═══════════════════════════════════════════');
-    console.log('📤 Datos que se enviarían al backend:');
-    console.log(JSON.stringify(payload, null, 2));
-    console.log('═══════════════════════════════════════════');
+    console.log('📤 Datos al backend:', payload);
 
-    // Simular respuesta exitosa después de 800ms
     setTimeout(() => {
       setLoading(false);
-      // Pasar los datos al componente padre
       onLoginSuccess({
         ...payload,
-        nombres: payload.nombreCompleto || payload.cedula || payload.cif,
+        nombres: payload.nombres || payload.cif,
       });
     }, 800);
   };
 
-  /* ----------------------------------------------------------
-     Obtener datos del rol seleccionado
-     ---------------------------------------------------------- */
   const rolActual = ROLES.find((r) => r.id === rolSeleccionado);
-
-  /** Texto del botón de submit según el rol */
   const textoBotonSubmit = () => {
     if (loading) return 'Procesando…';
-    if (rolSeleccionado === 'psicologo') return 'Ingresar';
+    if (rolSeleccionado === 'evaluador') return 'Ingresar';
     return 'Iniciar Prueba';
   };
 
-  /* ----------------------------------------------------------
-     Render
-     ---------------------------------------------------------- */
   return (
     <div className="login-wrapper">
       <div className="login-card">
-
-        {/* ===== Branding ===== */}
         <div className="login-brand">
           <div className="login-brand-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -249,30 +179,21 @@ export default function Login({ onLoginSuccess }) {
           <p>Batería Factorial de Aptitudes</p>
         </div>
 
-        {/* ===== Indicador de Pasos (dots) ===== */}
         <div className="step-indicator">
           <div className={`step-dot ${paso >= 1 ? 'active' : ''}`} />
           <div className={`step-line ${paso >= 2 ? 'active' : ''}`} />
           <div className={`step-dot ${paso >= 2 ? 'active' : ''}`} />
         </div>
 
-        {/* ===== PASO 1: Selección de Rol ===== */}
         {paso === 1 && (
           <>
             <div className="step-title">
               <h2>¿Quién eres?</h2>
               <p>Selecciona tu perfil para continuar</p>
             </div>
-
             <div className="roles-grid" id="roles-grid">
               {ROLES.map((rol) => (
-                <button
-                  key={rol.id}
-                  id={`role-${rol.id}`}
-                  className="role-card"
-                  onClick={() => seleccionarRol(rol.id)}
-                  type="button"
-                >
+                <button key={rol.id} className="role-card" onClick={() => seleccionarRol(rol.id)} type="button">
                   <div className="role-icon">{rol.icon}</div>
                   <span className="role-label">{rol.label}</span>
                   <span className="role-sublabel">{rol.sublabel}</span>
@@ -282,209 +203,113 @@ export default function Login({ onLoginSuccess }) {
           </>
         )}
 
-        {/* ===== PASO 2: Formulario Condicional ===== */}
         {paso === 2 && (
           <>
-            <div className="step-title">
-              <h2>Completa tus datos</h2>
-            </div>
-
-            {/* Badge con el rol seleccionado */}
+            <div className="step-title"><h2>Completa tus datos</h2></div>
             {rolActual && (
               <div className="role-selected-badge">
-                {rolActual.icon}
-                {rolActual.label}
+                {rolActual.icon} {rolActual.label}
               </div>
             )}
+            <form className="login-form" onSubmit={handleSubmit}>
+              
+              {/* === CAMPOS COMUNES PARA ESTUDIANTES === */}
+              {rolSeleccionado !== 'evaluador' && (
+                <>
+                  <div className="form-group">
+                    <label>Nombres y Apellidos</label>
+                    <input className="form-input" type="text" placeholder="Ej. María López Pérez" value={formData.nombres} onChange={(e) => handleChange('nombres', e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label>Fecha de Nacimiento</label>
+                    <input className="form-input" type="date" value={formData.fechaNacimiento} onChange={(e) => handleChange('fechaNacimiento', e.target.value)} />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Departamento</label>
+                      <input className="form-input" type="text" placeholder="Ej. Managua" value={formData.departamento} onChange={(e) => handleChange('departamento', e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Municipio</label>
+                      <input className="form-input" type="text" placeholder="Ej. Tipitapa" value={formData.municipio} onChange={(e) => handleChange('municipio', e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Comunidad / Barrio</label>
+                    <input className="form-input" type="text" placeholder="Ej. Barrio Central" value={formData.comunidad} onChange={(e) => handleChange('comunidad', e.target.value)} />
+                  </div>
+                </>
+              )}
 
-            <form className="login-form" onSubmit={handleSubmit} id="login-form">
-
-              {/* --- Formulario: Estudiante Universitario --- */}
+              {/* === CAMPOS ESPECÍFICOS === */}
               {rolSeleccionado === 'universitario' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>CIF</label>
+                    <input className="form-input" type="text" maxLength={8} placeholder="Ej. 25010756" value={formData.cif} onChange={(e) => handleChange('cif', e.target.value.replace(/\D/g, ''))} />
+                  </div>
+                  <div className="form-group">
+                    <label>Cédula</label>
+                    <input className="form-input" type="text" placeholder="Ej. 001-..." value={formData.numeroCedula} onChange={(e) => handleChange('numeroCedula', e.target.value)} />
+                  </div>
+                </div>
+              )}
+
+              {rolSeleccionado === 'egresado' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Cédula</label>
+                    <input className="form-input" type="text" placeholder="Ej. 001-..." value={formData.numeroCedula} onChange={(e) => handleChange('numeroCedula', e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label>Institución</label>
+                    <select className="form-select" value={formData.tipoInstitucion} onChange={(e) => handleChange('tipoInstitucion', e.target.value)}>
+                      <option value="">Seleccionar</option>
+                      <option value="Público">Público</option>
+                      <option value="Privado">Privado</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {rolSeleccionado === 'secundaria' && (
+                <div className="form-group">
+                  <label>Tipo de Institución</label>
+                  <select className="form-select" value={formData.tipoInstitucion} onChange={(e) => handleChange('tipoInstitucion', e.target.value)}>
+                    <option value="">Seleccionar</option>
+                    <option value="Público">Público</option>
+                    <option value="Privado">Privado</option>
+                  </select>
+                </div>
+              )}
+
+              {rolSeleccionado === 'evaluador' && (
                 <>
                   <div className="form-group">
-                    <label htmlFor="input-cif">CIF (Carnet Institucional)</label>
-                    <input
-                      id="input-cif"
-                      className={`form-input ${error.includes('CIF') ? 'input-error' : ''}`}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={8}
-                      placeholder="Ej. 25010756"
-                      value={formData.cif}
-                      onChange={(e) => {
-                        // Solo permitir dígitos
-                        const val = e.target.value.replace(/\D/g, '');
-                        handleChange('cif', val);
-                      }}
-                      autoFocus
-                      autoComplete="off"
-                    />
+                    <label>CIF / Cédula</label>
+                    <input className="form-input" type="text" value={formData.cif} onChange={(e) => handleChange('cif', e.target.value)} />
                   </div>
-
                   <div className="form-group">
-                    <label htmlFor="input-nombre">Nombre Completo</label>
-                    <input
-                      id="input-nombre"
-                      className="form-input"
-                      type="text"
-                      placeholder="Ej. María López Pérez"
-                      value={formData.nombreCompleto}
-                      onChange={(e) => handleChange('nombreCompleto', e.target.value)}
-                      autoComplete="name"
-                    />
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="input-edad">Edad</label>
-                      <input
-                        id="input-edad"
-                        className="form-input"
-                        type="number"
-                        min="15"
-                        max="80"
-                        placeholder="Ej. 20"
-                        value={formData.edad}
-                        onChange={(e) => handleChange('edad', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="input-sexo">Sexo</label>
-                      <select
-                        id="input-sexo"
-                        className="form-select"
-                        value={formData.sexo}
-                        onChange={(e) => handleChange('sexo', e.target.value)}
-                      >
-                        <option value="">Seleccionar</option>
-                        <option value="M">Masculino</option>
-                        <option value="F">Femenino</option>
-                      </select>
-                    </div>
+                    <label>Contraseña</label>
+                    <input className="form-input" type="password" value={formData.contrasena} onChange={(e) => handleChange('contrasena', e.target.value)} />
                   </div>
                 </>
               )}
 
-              {/* --- Formulario: Egresado o Estudiante de Secundaria --- */}
-              {(rolSeleccionado === 'egresado' || rolSeleccionado === 'secundaria') && (
-                <>
-                  <div className="form-group">
-                    <label htmlFor="input-nombre-ext">Nombre Completo</label>
-                    <input
-                      id="input-nombre-ext"
-                      className="form-input"
-                      type="text"
-                      placeholder="Ej. Carlos Martínez Ruiz"
-                      value={formData.nombreCompleto}
-                      onChange={(e) => handleChange('nombreCompleto', e.target.value)}
-                      autoFocus
-                      autoComplete="name"
-                    />
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="input-edad-ext">Edad</label>
-                      <input
-                        id="input-edad-ext"
-                        className="form-input"
-                        type="number"
-                        min="12"
-                        max="80"
-                        placeholder="Ej. 17"
-                        value={formData.edad}
-                        onChange={(e) => handleChange('edad', e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label htmlFor="input-sexo-ext">Sexo</label>
-                      <select
-                        id="input-sexo-ext"
-                        className="form-select"
-                        value={formData.sexo}
-                        onChange={(e) => handleChange('sexo', e.target.value)}
-                      >
-                        <option value="">Seleccionar</option>
-                        <option value="M">Masculino</option>
-                        <option value="F">Femenino</option>
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* --- Formulario: Psicólogo (Administrador) --- */}
-              {rolSeleccionado === 'psicologo' && (
-                <>
-                  <div className="form-group">
-                    <label htmlFor="input-cedula">Cédula de Identidad</label>
-                    <input
-                      id="input-cedula"
-                      className="form-input"
-                      type="text"
-                      placeholder="Ej. 001-120485-0001X"
-                      value={formData.cedula}
-                      onChange={(e) => handleChange('cedula', e.target.value)}
-                      autoFocus
-                      autoComplete="username"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="input-contrasena">Contraseña</label>
-                    <input
-                      id="input-contrasena"
-                      className="form-input"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.contrasena}
-                      onChange={(e) => handleChange('contrasena', e.target.value)}
-                      autoComplete="current-password"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* --- Mensaje de error --- */}
               {error && <div className="login-error" role="alert">{error}</div>}
 
-              {/* --- Botones: Volver + Submit --- */}
               <div className="form-actions">
-                <button
-                  id="btn-volver"
-                  className="btn-back"
-                  type="button"
-                  onClick={volverAPaso1}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m15 18-6-6 6-6" />
-                  </svg>
-                  Volver
+                <button className="btn-back" type="button" onClick={volverAPaso1}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg> Volver
                 </button>
-
-                <button
-                  id="btn-submit"
-                  className="btn-primary"
-                  type="submit"
-                  disabled={loading}
-                >
+                <button className="btn-primary" type="submit" disabled={loading}>
                   {textoBotonSubmit()}
-                  {!loading && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-                    </svg>
-                  )}
                 </button>
               </div>
             </form>
           </>
         )}
-
-        {/* ===== Footer ===== */}
-        <p className="login-footer">
-          Universidad Americana · Evaluación Psicométrica
-        </p>
+        <p className="login-footer">Universidad Americana · Evaluación Psicométrica</p>
       </div>
     </div>
   );

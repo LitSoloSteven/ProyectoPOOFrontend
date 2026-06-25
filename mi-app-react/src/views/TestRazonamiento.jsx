@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { obtenerConfiguracionTest, finalizarPrueba } from '../services/api';
+import { finalizarPrueba } from '../services/api';
 import './TestRazonamiento.css';
 
 /* =============================================================
    Datos de demostración del Test de Razonamiento Forma B (Q26–Q55).
    Se usan SOLO cuando el backend no responde o no hay datos.
-   En producción, las preguntas se cargan desde la API.
    ============================================================= */
 const DEMO_PREGUNTAS = Array.from({ length: 30 }, (_, i) => ({
   id: `pregunta-${i + 1}`,
@@ -18,35 +17,22 @@ const DEMO_PREGUNTAS = Array.from({ length: 30 }, (_, i) => ({
   })),
 }));
 
-/** Tiempo límite en segundos (12 minutos = 720s según la BFA) */
 const TIEMPO_LIMITE_SEGUNDOS = 12 * 60;
 
-/**
- * TestRazonamiento.jsx — Flujo completo del Test de Razonamiento (Forma B).
- *
- * Estados del componente:
- *  1. INSTRUCCIONES  → Pantalla pre-test (cronómetro NO arranca)
- *  2. CARGANDO       → Obteniendo preguntas del backend
- *  3. EN_PROGRESO    → Test activo (cronómetro corriendo, preguntas visibles)
- *
- * UX: Las preguntas del BFA van de Q26 a Q55, pero al estudiante
- *      se le muestra "Pregunta 1 de 30", "Pregunta 2 de 30", etc.
- *
- * @param {object}   estudiante - Datos del usuario autenticado
- * @param {string}   pruebaId   - ID de la PruebaDeRazonamiento
- * @param {function} onFinish   - Callback al finalizar (recibe resultado)
- */
 export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
   /* ----------------------------------------------------------
      Estados del componente
      ---------------------------------------------------------- */
-  const [fase, setFase] = useState('INSTRUCCIONES'); // 'INSTRUCCIONES' | 'CARGANDO' | 'EN_PROGRESO'
+  const [fase, setFase] = useState('INSTRUCCIONES');
   const [preguntas, setPreguntas] = useState([]);
   const [preguntaActual, setPreguntaActual] = useState(0);
   const [respuestas, setRespuestas] = useState({});
   const [segundosRestantes, setSegundosRestantes] = useState(TIEMPO_LIMITE_SEGUNDOS);
   const [tiempoAgotado, setTiempoAgotado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  
+  // NUEVO: Estado de diagnóstico
+  const [estadoConexion, setEstadoConexion] = useState('Esperando inicio...');
 
   const timerRef = useRef(null);
 
@@ -68,7 +54,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
     return `${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}`;
   };
 
-  /** Clase CSS del cronómetro según el tiempo restante */
   const timerClass = () => {
     if (segundosRestantes <= 60) return 'timer-display danger';
     if (segundosRestantes <= 180) return 'timer-display warning';
@@ -76,26 +61,84 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
   };
 
   /* ----------------------------------------------------------
-     Cargar preguntas del backend
+     Cargar preguntas del backend (CON DIAGNÓSTICO AGRESIVO)
      ---------------------------------------------------------- */
   const cargarPreguntas = async () => {
     setFase('CARGANDO');
+    setEstadoConexion('Iniciando conexión con OpenXava 🚀...');
+
     try {
-      const config = await obtenerConfiguracionTest();
-      // Si el backend devuelve datos válidos, usarlos
-      if (config && config.preguntas && config.preguntas.length > 0) {
-        setPreguntas(config.preguntas);
-      } else {
-        // Fallback a datos de demostración
-        console.warn('⚠️ Backend no devolvió preguntas. Usando datos de demostración.');
+      console.log('📡 [DIAGNÓSTICO] Intentando conectar a: /ProyectoBackend/api/test-razonamiento/configuracion (vía Proxy Vite)');
+      
+      const response = await fetch('/ProyectoBackend/api/test-razonamiento/configuracion', {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      console.log(`📥 [DIAGNÓSTICO] Respuesta recibida. Status HTTP: ${response.status}`);
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => 'No se pudo leer el body');
+        console.error('📄 [DIAGNÓSTICO] Cuerpo del error recibido:', errorBody);
+
+        if (response.status === 404) {
+          if (errorBody.includes('No hay configuraciones')) {
+            console.error('❌ [ERROR 404 DE LÓGICA] El endpoint existe y respondió, pero la Base de Datos dice que NO hay ninguna configuración creada. Ve a OpenXava y crea un registro en "Configuracion Test Razonamiento".');
+            setEstadoConexion('BD Vacía: Falta crear la Configuración ❌');
+          } else {
+            console.error('❌ [ERROR 404 DE RUTA] Tomcat no encontró el endpoint. El servidor está vivo pero la ruta es incorrecta.');
+            setEstadoConexion('Error 404: Ruta no encontrada ❌');
+          }
+        } else if (response.status === 401 || response.status === 403) {
+          console.error(`🔒 [ERROR ${response.status}] Bloqueo de seguridad. Asegúrate de tener restApiAnonymousUrls configurado en naviox.properties y Tomcat reiniciado.`);
+          setEstadoConexion(`Error ${response.status}: Acceso denegado 🔒`);
+        } else {
+          console.error(`❌ [ERROR HTTP] Status inesperado: ${response.status} - ${response.statusText}`);
+          setEstadoConexion(`Error HTTP ${response.status} ❌`);
+        }
+        throw new Error(`HTTP Error ${response.status} - ${errorBody}`);
+      }
+
+      const data = await response.json();
+      console.log('📦 [DIAGNÓSTICO] Payload JSON decodificado:', data);
+
+      // El endpoint personalizado devuelve { id, titulo, tiempoLimiteMinutos, preguntas: [...] }
+      const arrayPreguntas = data.preguntas || [];
+
+      if (arrayPreguntas.length === 0) {
+        console.warn('⚠️ [ESTADO VACÍO] La petición fue 200 OK, pero no hay preguntas dentro de la configuración. ¡Agrega preguntas a la serie en OpenXava!');
+        setEstadoConexion('Conexión OK, pero configuración sin preguntas 📭');
         setPreguntas(DEMO_PREGUNTAS);
+      } else {
+        console.log(`✅ [ÉXITO] Se encontraron ${arrayPreguntas.length} preguntas en la base de datos.`);
+        setEstadoConexion('¡Datos cargados con éxito! ✅');
+        
+        // Mapeo adaptado al DTO
+        const preguntasFormateadas = arrayPreguntas.map((p, index) => ({
+          id: p.id || `pregunta-${index}`,
+          orden: p.orden || (index + 1),
+          enunciado: p.enunciado || `Sin enunciado`,
+          alternativas: p.alternativas ? p.alternativas.map((a, aIdx) => ({
+            id: a.id || `alt-${index}-${aIdx}`,
+            letra: a.letra || '?',
+            texto: a.texto || ''
+          })) : []
+        }));
+        
+        setPreguntas(preguntasFormateadas);
       }
     } catch (err) {
-      // Si falla la conexión, usar datos demo
-      console.warn('⚠️ Error al cargar preguntas del backend. Usando datos de demostración.', err);
+      console.error('💥 [ERROR CATASTRÓFICO] Falló el fetch (red o CORS):', err.message);
+      setEstadoConexion('Fallo de red o servidor caído 💥');
+      console.warn('⚠️ Inyectando datos de demostración como fallback...');
       setPreguntas(DEMO_PREGUNTAS);
     }
-    setFase('EN_PROGRESO');
+    
+    // Pequeño delay para que el usuario logre leer el estado (si quiere)
+    setTimeout(() => {
+      setFase('EN_PROGRESO');
+    }, 1500);
   };
 
   /* ----------------------------------------------------------
@@ -155,7 +198,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
     setEnviando(true);
     clearInterval(timerRef.current);
 
-    // Empaquetar respuestas para el backend
     const payload = Object.entries(respuestas).map(([preguntaId, alternativaId]) => ({
       preguntaId,
       alternativaId,
@@ -168,7 +210,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
       onFinish(resultado);
     } catch (err) {
       console.error('Error al enviar respuestas:', err);
-      // Fallback: navegar a resultados con datos locales
       onFinish({
         totalRespondidas: respondidas,
         totalPreguntas,
@@ -177,7 +218,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
     }
   }, [enviando, respuestas, pruebaId, onFinish, respondidas, totalPreguntas, tiempoAgotado]);
 
-  /* --- Auto-submit cuando se agota el tiempo --- */
   useEffect(() => {
     if (tiempoAgotado && !enviando) {
       enviarRespuestas();
@@ -190,8 +230,7 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
   if (fase === 'INSTRUCCIONES') {
     return (
       <div className="instructions-wrapper">
-        <div className="instructions-card">
-          {/* Ícono */}
+        <div className="instructions-card" style={{ maxWidth: '800px' }}>
           <div className="instructions-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
@@ -200,17 +239,41 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
           </div>
 
           <h1>Test de Razonamiento</h1>
-          <p className="instructions-subtitle">Forma B — Batería Factorial de Aptitudes</p>
+          <p className="instructions-subtitle">Forma B</p>
 
-          {/* Instrucciones textuales */}
-          <div className="instructions-text">
-            En las páginas siguientes encontrará diversas series incompletas.
-            Seleccione la opción que completa lógicamente cada serie.
-            Dispondrá de un límite estricto de <strong>12 minutos</strong>.
-            Procure trabajar rápidamente y sin perder tiempo.
+          <div className="instructions-text" style={{ textAlign: 'justify', fontSize: '0.9rem', maxHeight: '350px', overflowY: 'auto', padding: '15px', border: '1px solid #e0e0e0', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#fdfdfd' }}>
+            <p><strong>INSTRUCCIONES</strong></p>
+            <p>Usted va a encontrar en las páginas siguientes diversos ejercicios. En cada uno de ellos hay una serie incompleta y cuatro posibles respuestas marcadas con la letra A, B, C, y D; una de las cuales corresponde a la solución correcta que debería colocarse en la casilla en blanco de la serie para completarla lógicamente. Marque con una equis(x) en la columna "RAZONAMIENTO" de su Hoja de Respuestas, la letra que corresponda al solución correcta que completa la serie lógicamente. Existe una sola respuesta correcta en cada ejercicio.</p>
+            <p>Si usted se equivoca tache la letra señalada y marque con una equis (x) la nueva respuesta.</p>
+            <p><strong>Ejemplos:</strong></p>
+            <p>
+              23. A-C E<br />
+              A: H<br />
+              B: I<br />
+              C:<br />
+              D: J
+            </p>
+            <p>La respuesta correcta es "I" Usted debe haber marcado con una equis (x) la letra B, que corresponde a la respuesta correcta, al lado derecho del número 23, en la columna RAZONAMIENTO de su Hoja de Respuestas.</p>
+            <p>
+              24. METAL es a MINERAL como PLANTA es a<br />
+              A- NATURALEZA<br />
+              B- AGRICULTURA<br />
+              C- VEGETAL<br />
+              D- HORTALIZA
+            </p>
+            <p>La solución correcta es VEGETAL. Marque con una equis (x) la letra C, que corresponde a esta palabra, al lado derecho del número 24, en la columna RAZONAMIENTO, de su Hoja de Respuestas.</p>
+            <p>Haga usted el ejemplo N° 25</p>
+            <p>
+              25. 123-234-345<br />
+              A- 567<br />
+              B- 354<br />
+              C- 465<br />
+              D- 456
+            </p>
+            <p>Marque con una equis (x) la respuesta correcta al lado derecho del número 25, en la columna "RAZONAMIENTO" de su Hoja de Respuestas.</p>
+            <p>Dispondrá de 12 minutos para hacer esta prueba. Procure hacer el máximo de ejercicios trabajando lo más rápidamente que pueda, sin perder tiempo. Si no encuentra la solución a un ejercicio, pase al siguiente. Usted puede intentar resolverlo al final si dispone de tiempo.</p>
           </div>
 
-          {/* Metadatos del test */}
           <div className="instructions-meta">
             <div className="meta-item">
               <span className="meta-value">30</span>
@@ -226,7 +289,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
             </div>
           </div>
 
-          {/* Botón Iniciar */}
           <button
             id="btn-iniciar-prueba"
             className="btn-start"
@@ -244,16 +306,22 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
   }
 
   /* ==========================================================
-     RENDER: Estado de Carga
+     RENDER: Estado de Carga / Diagnóstico
      ========================================================== */
   if (fase === 'CARGANDO' || (fase === 'EN_PROGRESO' && preguntas.length === 0)) {
     return (
       <div className="instructions-wrapper">
-        <div className="instructions-card">
-          <div className="loading-wrapper">
+        <div className="instructions-card" style={{ textAlign: 'center', padding: '40px' }}>
+          <div className="loading-wrapper" style={{ marginBottom: '20px' }}>
             <div className="spinner" />
-            <p>Cargando preguntas del test…</p>
           </div>
+          <h2 style={{ color: '#0056b3', margin: '15px 0' }}>Diagnóstico de Red</h2>
+          <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#333' }}>
+            {estadoConexion}
+          </p>
+          <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '10px' }}>
+            Abre la consola de herramientas de desarrollo (F12) para ver los logs detallados.
+          </p>
         </div>
       </div>
     );
@@ -264,7 +332,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
      ========================================================== */
   return (
     <div className="test-wrapper">
-      {/* Barra de progreso superior */}
       <div className="progress-bar-track" role="progressbar" aria-valuenow={respondidas} aria-valuemin={0} aria-valuemax={totalPreguntas}>
         <div
           className="progress-bar-fill"
@@ -272,7 +339,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
         />
       </div>
 
-      {/* Cabecera con logo y cronómetro */}
       <header className="test-header">
         <div className="test-header-left">
           <div className="test-header-logo">
@@ -289,7 +355,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
           </div>
         </div>
 
-        {/* Cronómetro */}
         <div className="timer-container" id="timer">
           <svg className="timer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
@@ -301,27 +366,22 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
         </div>
       </header>
 
-      {/* Indicador numérico de progreso (muestra 1-30, no Q26-Q55) */}
       <div className="test-progress-info">
         Pregunta <strong>{preguntaActual + 1}</strong> de <strong>{totalPreguntas}</strong>
         &nbsp;·&nbsp; {respondidas} respondidas
       </div>
 
-      {/* Contenido: tarjeta de pregunta */}
       <main className="test-content">
         {pregunta ? (
           <div className="test-card" key={pregunta.id}>
-            {/* Badge: muestra "Pregunta X" amigable + el código real Q## sutil */}
             <div className="question-badge">
               <span>Pregunta {preguntaActual + 1}</span>
             </div>
 
-            {/* Enunciado real de la pregunta */}
             <h2 className="question-text" id={`question-${preguntaActual}`}>
               {pregunta.enunciado}
             </h2>
 
-            {/* Opciones A-D mapeadas desde alternativas */}
             <div className="options-grid" role="radiogroup" aria-labelledby={`question-${preguntaActual}`}>
               {pregunta.alternativas.map((alt) => {
                 const isSelected = respuestas[pregunta.id] === alt.id;
@@ -341,7 +401,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
               })}
             </div>
 
-            {/* Navegación */}
             <div className="test-navigation">
               <button
                 id="btn-anterior"
@@ -365,7 +424,7 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
                 >
                   Siguiente
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m9 18 6-6-6-6" />
+                    <path d="m9 18-6-6-6-6" />
                   </svg>
                 </button>
               ) : (
@@ -387,7 +446,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
             </div>
           </div>
         ) : (
-          /* Fallback si la pregunta actual no existe */
           <div className="test-card">
             <div className="loading-wrapper">
               <div className="spinner" />
@@ -397,7 +455,6 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
         )}
       </main>
 
-      {/* Modal: Tiempo Agotado */}
       {tiempoAgotado && (
         <div className="time-expired-overlay" role="dialog" aria-modal="true">
           <div className="time-expired-modal">
