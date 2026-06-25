@@ -46,7 +46,7 @@ const ROLES = [
         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
       </svg>
     ),
-  },
+  }
 ];
 
 export default function Login({ onLoginSuccess }) {
@@ -200,14 +200,11 @@ export default function Login({ onLoginSuccess }) {
     <div className="login-wrapper">
       <div className="login-card">
         <div className="login-brand">
-          <div className="login-brand-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-            </svg>
+
+          <div className="login-header">
+            <img src="/uam-logo.png" alt="UAM" style={{ maxWidth: '200px', marginBottom: '1rem' }} />
+            <p>Batería Factorial de Aptitudes (BFA) - Forma B</p>
           </div>
-          <h1>BFA Test</h1>
-          <p>Batería Factorial de Aptitudes</p>
         </div>
 
         <div className="step-indicator">
@@ -348,7 +345,6 @@ export default function Login({ onLoginSuccess }) {
                   </div>
                 </>
               )}
-
               {error && <div className="login-error" role="alert">{error}</div>}
 
               <div className="form-actions">

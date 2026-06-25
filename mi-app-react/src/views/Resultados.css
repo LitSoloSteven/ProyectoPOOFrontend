@@ -17,7 +17,7 @@
   box-shadow: var(--shadow-lg);
   padding: var(--space-12) var(--space-10);
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
   text-align: center;
   animation: fadeInScale 0.5s ease-out both;
 }
@@ -59,16 +59,23 @@
 /* --- Resumen en cards pequeñas --- */
 .resultados-stats {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-4);
   margin-bottom: var(--space-8);
 }
 
 .stat-card {
   flex: 1;
+  min-width: 130px;
   background: var(--color-bg);
   border-radius: var(--radius-md);
   padding: var(--space-5) var(--space-4);
   border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .stat-value {

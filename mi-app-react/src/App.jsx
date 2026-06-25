@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Login from './views/Login';
 import TestRazonamiento from './views/TestRazonamiento';
 import Resultados from './views/Resultados';
+import DashboardEvaluador from './views/DashboardEvaluador';
 
 /**
  * App.jsx — Componente raíz de la aplicación BFA.
@@ -20,10 +21,13 @@ export default function App() {
   const [pruebaId, setPruebaId] = useState(null);
   const [resultado, setResultado] = useState(null);
 
-  /** Callback: login exitoso → iniciar prueba */
   const handleLoginSuccess = (est) => {
     setEstudiante(est);
-    setVista('test');
+    if (est.rol === 'evaluador') {
+      setVista('dashboard');
+    } else {
+      setVista('test');
+    }
   };
 
   /** Callback: prueba finalizada → mostrar resultados */
@@ -58,6 +62,13 @@ export default function App() {
         <Resultados
           resultado={resultado}
           estudiante={estudiante}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {vista === 'dashboard' && (
+        <DashboardEvaluador
+          evaluador={estudiante}
           onLogout={handleLogout}
         />
       )}

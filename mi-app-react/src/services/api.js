@@ -106,3 +106,20 @@ export async function finalizarPrueba(pruebaId, respuestas) {
     body: JSON.stringify({ pruebaId, respuestas }),
   });
 }
+
+/**
+ * Obtiene todos los resultados globales para el panel del Evaluador.
+ */
+export async function obtenerResultados() {
+  return request('/api/test-razonamiento/resultados-globales');
+}
+
+/**
+ * Guarda un reporte del evaluador.
+ */
+export async function guardarReporteEvaluador(data) {
+  return request('/api/test-razonamiento/guardar-reporte', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
