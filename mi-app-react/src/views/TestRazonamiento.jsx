@@ -31,6 +31,17 @@ export default function TestRazonamiento({ estudiante, onFinish }) {
   const [pruebaIdReal, setPruebaIdReal] = useState(null);
 
   const timerRef = useRef(null);
+  const wrapperRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      wrapperRef.current.style.setProperty('--mouse-x', `${x}px`);
+      wrapperRef.current.style.setProperty('--mouse-y', `${y}px`);
+    }
+  };
 
   /* ----------------------------------------------------------
      Derivados
@@ -200,7 +211,7 @@ export default function TestRazonamiento({ estudiante, onFinish }) {
   /* --- Render: Pantalla de Instrucciones --- */
   if (fase === 'INSTRUCCIONES') {
     return (
-      <div className="instructions-wrapper">
+      <div className="instructions-wrapper" ref={wrapperRef} onMouseMove={handleMouseMove}>
         <div className="instructions-card" style={{ maxWidth: '800px' }}>
           <div className="instructions-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -280,7 +291,7 @@ export default function TestRazonamiento({ estudiante, onFinish }) {
 
   /* --- Render: Test en Progreso --- */
   return (
-    <div className="test-wrapper">
+    <div className="test-wrapper" ref={wrapperRef} onMouseMove={handleMouseMove}>
       <div className="progress-bar-track" role="progressbar" aria-valuenow={respondidas} aria-valuemin={0} aria-valuemax={totalPreguntas}>
         <div
           className="progress-bar-fill"

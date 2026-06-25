@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { obtenerResultados, guardarReporteEvaluador } from '../services/api';
 import './DashboardEvaluador.css';
 
@@ -20,6 +20,19 @@ export default function DashboardEvaluador({ evaluador, onLogout }) {
 
   // Estado para el modal de detalles
   const [modalResult, setModalResult] = useState(null);
+
+  // Ref para el wrapper y efecto del cursor
+  const wrapperRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      wrapperRef.current.style.setProperty('--mouse-x', `${x}px`);
+      wrapperRef.current.style.setProperty('--mouse-y', `${y}px`);
+    }
+  };
 
   const fetchResultados = async () => {
     try {
@@ -98,7 +111,7 @@ export default function DashboardEvaluador({ evaluador, onLogout }) {
   });
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="dashboard-wrapper" ref={wrapperRef} onMouseMove={handleMouseMove}>
       <header className="dashboard-header">
         <div className="dashboard-brand">
           <h1>BFA Panel de Control</h1>

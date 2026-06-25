@@ -3,6 +3,7 @@
    Color Principal: #009CA6 (Pantone 320C)
    Tipografía: Inter (Google Fonts)
    ============================================================= */
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
 
 /* ---------- Reset & Base ---------- */
 *,
@@ -20,7 +21,7 @@
   --color-primary-light: #33B5BD;
   --color-primary-bg:    rgba(0, 156, 166, 0.06);
 
-  /* --- Neutros --- */
+  /* --- Neutros (Modo Claro/Base) --- */
   --color-bg:            #F7F8FA;
   --color-surface:       #FFFFFF;
   --color-border:        #E2E6EC;
@@ -42,6 +43,121 @@
   --shadow-md:           0 4px 16px rgba(26, 35, 50, 0.08);
   --shadow-lg:           0 8px 32px rgba(26, 35, 50, 0.12);
   --shadow-primary:      0 4px 14px rgba(0, 156, 166, 0.25);
+}
+
+[data-theme="dark"] {
+  /* --- Neutros (Modo Oscuro) --- */
+  --color-bg:            #121212;
+  --color-surface:       #1E1E1E;
+  --color-border:        #333333;
+  --color-text:          #E0E0E0;
+  --color-text-secondary:#A0A0A0;
+  --color-text-muted:    #6b7280;
+  
+  --color-primary-bg:    rgba(0, 156, 166, 0.15);
+
+  /* --- Gradientes Oscuros --- */
+  --gradient-subtle:     linear-gradient(180deg, #1A1A1A 0%, #121212 100%);
+
+  /* --- Sombras Oscuras --- */
+  --shadow-sm:           0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md:           0 4px 16px rgba(0, 0, 0, 0.6);
+  --shadow-lg:           0 8px 32px rgba(0, 0, 0, 0.8);
+  --shadow-primary:      0 4px 14px rgba(0, 156, 166, 0.35);
+}
+
+[data-theme="vintage"] {
+  /* --- Tipografía Irregular (Máquina de Escribir Antigua) --- */
+  --font-family:         'Special Elite', cursive, serif;
+  
+  /* --- Colores Vintage --- */
+  --color-bg:            #f4ecd8;
+  --color-surface:       #fffdf7;
+  --color-border:        #d4c3a3;
+  --color-text:          #4a3b2c;
+  --color-text-secondary:#6b5642;
+  --color-text-muted:    #8b7355;
+  
+  --color-primary:       #8b5a2b;
+  --color-primary-dark:  #654321;
+  --color-primary-light: #a0522d;
+  --color-primary-bg:    rgba(139, 90, 43, 0.1);
+
+  /* --- Sombras Cálidas --- */
+  --shadow-sm:           0 1px 3px rgba(101, 75, 43, 0.15);
+  --shadow-md:           0 4px 16px rgba(101, 75, 43, 0.2);
+  --shadow-lg:           0 8px 32px rgba(101, 75, 43, 0.25);
+  --shadow-primary:      0 4px 14px rgba(139, 90, 43, 0.3);
+
+  /* --- Gradientes --- */
+  --gradient-subtle:     linear-gradient(180deg, #fdfbf7 0%, #f4ecd8 100%);
+  --gradient-primary:    linear-gradient(135deg, #a0522d 0%, #8b5a2b 100%);
+}
+
+/* Fondo base para el tema vintage */
+[data-theme="vintage"] body,
+[data-theme="vintage"] .login-wrapper,
+[data-theme="vintage"] .test-wrapper,
+[data-theme="vintage"] .instructions-wrapper,
+[data-theme="vintage"] .dashboard-wrapper {
+  background: var(--color-bg) !important;
+}
+
+/* Overlay global de ruido y arrugas que cubre toda la pantalla (Optimizado para 0 lag) */
+[data-theme="vintage"]::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.15; /* Granulado más sutil */
+  background-image: 
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
+    linear-gradient(135deg, rgba(0,0,0,0.6) 0%, transparent 40%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.9) 100%),
+    linear-gradient(45deg, transparent 30%, rgba(0,0,0,0.4) 33%, transparent 36%);
+}
+
+/* Forzar la tipografía irregular en todos los textos del tema vintage */
+[data-theme="vintage"],
+[data-theme="vintage"] body,
+[data-theme="vintage"] button,
+[data-theme="vintage"] input,
+[data-theme="vintage"] select,
+[data-theme="vintage"] h1,
+[data-theme="vintage"] h2,
+[data-theme="vintage"] h3,
+[data-theme="vintage"] p,
+[data-theme="vintage"] span,
+[data-theme="vintage"] div {
+  font-family: 'Special Elite', cursive, serif !important;
+}
+
+/* Bordes asimétricos para elementos clave en tema vintage */
+[data-theme="vintage"] .login-card,
+[data-theme="vintage"] .test-card,
+[data-theme="vintage"] .instructions-card,
+[data-theme="vintage"] .dashboard-table-container,
+[data-theme="vintage"] .stat-card,
+[data-theme="vintage"] .modal-content {
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+  border: 1px solid var(--color-border);
+}
+
+[data-theme="vintage"] .btn-primary,
+[data-theme="vintage"] .btn-nav,
+[data-theme="vintage"] .btn-start,
+[data-theme="vintage"] .role-card,
+[data-theme="vintage"] .option-button,
+[data-theme="vintage"] .form-input,
+[data-theme="vintage"] .form-select,
+[data-theme="vintage"] .btn-logout {
+  border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+}
+
+:root {
 
   /* --- Tipografía --- */
   --font-family:         'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

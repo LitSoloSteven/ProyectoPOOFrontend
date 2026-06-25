@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { registrarEstudiante, loginAdministrativo } from '../services/api';
 import './Login.css';
 
@@ -54,6 +54,19 @@ export default function Login({ onLoginSuccess }) {
   const [rolSeleccionado, setRolSeleccionado] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Ref para el wrapper y efecto del cursor
+  const wrapperRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      wrapperRef.current.style.setProperty('--mouse-x', `${x}px`);
+      wrapperRef.current.style.setProperty('--mouse-y', `${y}px`);
+    }
+  };
 
   const [formData, setFormData] = useState({
     nombres: '',
@@ -197,7 +210,7 @@ export default function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div className="login-wrapper">
+    <div className="login-wrapper" ref={wrapperRef} onMouseMove={handleMouseMove}>
       <div className="login-card">
         <div className="login-brand">
 

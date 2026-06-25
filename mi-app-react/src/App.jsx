@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Login from './views/Login';
 import TestRazonamiento from './views/TestRazonamiento';
 import Resultados from './views/Resultados';
 import DashboardEvaluador from './views/DashboardEvaluador';
+import ThemeSwitcher from './components/ThemeSwitcher';
 
 /**
  * App.jsx — Componente raíz de la aplicación BFA.
@@ -16,6 +17,7 @@ import DashboardEvaluador from './views/DashboardEvaluador';
  * se gestiona localmente con useState.
  */
 export default function App() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('bfa-theme') || 'animated');
   const [vista, setVista] = useState('login'); // 'login' | 'test' | 'resultados'
   const [estudiante, setEstudiante] = useState(null);
   const [pruebaId, setPruebaId] = useState(null);
@@ -46,6 +48,8 @@ export default function App() {
 
   return (
     <>
+      <ThemeSwitcher theme={theme} setTheme={setTheme} />
+
       {vista === 'login' && (
         <Login onLoginSuccess={handleLoginSuccess} />
       )}

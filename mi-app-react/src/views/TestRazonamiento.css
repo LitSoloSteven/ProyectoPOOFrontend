@@ -5,9 +5,70 @@
 /* --- Layout --- */
 .test-wrapper {
   min-height: 100vh;
-  background: var(--gradient-subtle);
+  background: 
+    radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.4) 0%, transparent 60%),
+    rgba(0, 156, 166, 0.25);
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ondas animadas de fondo */
+.test-wrapper::before,
+.test-wrapper::after,
+.instructions-wrapper::before,
+.instructions-wrapper::after {
+  content: "";
+  position: absolute;
+  width: 200vw;
+  height: 200vw;
+  background: rgba(0, 156, 166, 0.12);
+  border-radius: 45%;
+  animation: wave 40s linear infinite;
+  z-index: 0;
+  pointer-events: none;
+  left: -50vw;
+  bottom: -150vw;
+}
+
+.test-wrapper::after,
+.instructions-wrapper::after {
+  background: rgba(0, 156, 166, 0.18);
+  border-radius: 40%;
+  animation: wave 35s linear infinite reverse;
+  bottom: -145vw;
+}
+
+@keyframes wave {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* --- Ocultar ondas en temas no animados --- */
+[data-theme="basic"] .test-wrapper,
+[data-theme="basic"] .instructions-wrapper {
+  background: var(--gradient-subtle);
+}
+
+[data-theme="basic"] .test-wrapper::before,
+[data-theme="basic"] .test-wrapper::after,
+[data-theme="basic"] .instructions-wrapper::before,
+[data-theme="basic"] .instructions-wrapper::after,
+[data-theme="vintage"] .test-wrapper::before,
+[data-theme="vintage"] .test-wrapper::after,
+[data-theme="vintage"] .instructions-wrapper::before,
+[data-theme="vintage"] .instructions-wrapper::after {
+  display: none;
+}
+
+.progress-bar-track,
+.test-header,
+.test-progress-info,
+.test-content,
+.time-expired-overlay {
+  position: relative;
+  z-index: 1;
 }
 
 /* --- Barra de Progreso Superior --- */
@@ -433,11 +494,17 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: var(--gradient-subtle);
+  background: 
+    radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.4) 0%, transparent 60%),
+    rgba(0, 156, 166, 0.25);
   padding: var(--space-4);
+  position: relative;
+  overflow: hidden;
 }
 
 .instructions-card {
+  position: relative;
+  z-index: 1;
   background: var(--color-surface);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
