@@ -238,14 +238,85 @@
   font-weight: 500;
 }
 
-/* --- Navegación --- */
+/* --- Navegación Inferior (Anterior/Siguiente) --- */
 .test-navigation {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: var(--space-10);
+  margin-top: var(--space-8);
   padding-top: var(--space-6);
   border-top: 1px solid var(--color-border);
+}
+
+/* --- Grid de Navegación de Preguntas (Cajón) --- */
+.question-nav-drawer {
+  margin-top: var(--space-8);
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  animation: fadeIn 0.4s ease-out;
+}
+
+.question-nav-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.question-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: var(--space-2);
+  justify-items: center;
+}
+
+.nav-grid-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-family);
+}
+
+.nav-grid-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-primary-light);
+  box-shadow: 0 4px 12px rgba(0, 156, 166, 0.15);
+  color: var(--color-primary);
+}
+
+.nav-grid-btn.answered {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.nav-grid-btn.current {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--shadow-primary);
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.nav-grid-btn.current:hover {
+  transform: scale(1.1) translateY(-2px);
 }
 
 .btn-nav {

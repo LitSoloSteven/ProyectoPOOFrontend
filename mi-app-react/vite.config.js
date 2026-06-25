@@ -9,7 +9,7 @@ export default defineConfig({
     // Así el frontend (5173) y el backend (8080) se ven como un solo origen
     proxy: {
       '/ProyectoBackend': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
     },

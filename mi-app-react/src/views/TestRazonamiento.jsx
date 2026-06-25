@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { finalizarPrueba } from '../services/api';
+import { finalizarPrueba, iniciarPrueba as apiIniciarPrueba } from '../services/api';
 import './TestRazonamiento.css';
 
 /* =============================================================
@@ -19,7 +19,7 @@ const DEMO_PREGUNTAS = Array.from({ length: 30 }, (_, i) => ({
 
 const TIEMPO_LIMITE_SEGUNDOS = 12 * 60;
 
-export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
+export default function TestRazonamiento({ estudiante, onFinish }) {
   /* ----------------------------------------------------------
      Estados del componente
      ---------------------------------------------------------- */
@@ -30,9 +30,7 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
   const [segundosRestantes, setSegundosRestantes] = useState(TIEMPO_LIMITE_SEGUNDOS);
   const [tiempoAgotado, setTiempoAgotado] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  
-  // NUEVO: Estado de diagnóstico
-  const [estadoConexion, setEstadoConexion] = useState('Esperando inicio...');
+  const [pruebaIdReal, setPruebaIdReal] = useState(null);
 
   const timerRef = useRef(null);
 
@@ -61,60 +59,33 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
   };
 
   /* ----------------------------------------------------------
-     Cargar preguntas del backend (CON DIAGNÓSTICO AGRESIVO)
+     Cargar preguntas del backend y registrar inicio
      ---------------------------------------------------------- */
   const cargarPreguntas = async () => {
     setFase('CARGANDO');
-    setEstadoConexion('Iniciando conexión con OpenXava 🚀...');
 
     try {
-      console.log('📡 [DIAGNÓSTICO] Intentando conectar a: /ProyectoBackend/api/test-razonamiento/configuracion (vía Proxy Vite)');
-      
+      // 1. Obtener ID real de la prueba desde el backend
+      const initData = await apiIniciarPrueba(estudiante?.id || '');
+      setPruebaIdReal(initData.id);
+
+      // 2. Obtener preguntas
       const response = await fetch('/ProyectoBackend/api/test-razonamiento/configuracion', {
         headers: {
           'Accept': 'application/json'
         }
       });
 
-      console.log(`📥 [DIAGNÓSTICO] Respuesta recibida. Status HTTP: ${response.status}`);
-
       if (!response.ok) {
-        const errorBody = await response.text().catch(() => 'No se pudo leer el body');
-        console.error('📄 [DIAGNÓSTICO] Cuerpo del error recibido:', errorBody);
-
-        if (response.status === 404) {
-          if (errorBody.includes('No hay configuraciones')) {
-            console.error('❌ [ERROR 404 DE LÓGICA] El endpoint existe y respondió, pero la Base de Datos dice que NO hay ninguna configuración creada. Ve a OpenXava y crea un registro en "Configuracion Test Razonamiento".');
-            setEstadoConexion('BD Vacía: Falta crear la Configuración ❌');
-          } else {
-            console.error('❌ [ERROR 404 DE RUTA] Tomcat no encontró el endpoint. El servidor está vivo pero la ruta es incorrecta.');
-            setEstadoConexion('Error 404: Ruta no encontrada ❌');
-          }
-        } else if (response.status === 401 || response.status === 403) {
-          console.error(`🔒 [ERROR ${response.status}] Bloqueo de seguridad. Asegúrate de tener restApiAnonymousUrls configurado en naviox.properties y Tomcat reiniciado.`);
-          setEstadoConexion(`Error ${response.status}: Acceso denegado 🔒`);
-        } else {
-          console.error(`❌ [ERROR HTTP] Status inesperado: ${response.status} - ${response.statusText}`);
-          setEstadoConexion(`Error HTTP ${response.status} ❌`);
-        }
-        throw new Error(`HTTP Error ${response.status} - ${errorBody}`);
+        throw new Error(`HTTP Error ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('📦 [DIAGNÓSTICO] Payload JSON decodificado:', data);
-
-      // El endpoint personalizado devuelve { id, titulo, tiempoLimiteMinutos, preguntas: [...] }
       const arrayPreguntas = data.preguntas || [];
 
       if (arrayPreguntas.length === 0) {
-        console.warn('⚠️ [ESTADO VACÍO] La petición fue 200 OK, pero no hay preguntas dentro de la configuración. ¡Agrega preguntas a la serie en OpenXava!');
-        setEstadoConexion('Conexión OK, pero configuración sin preguntas 📭');
         setPreguntas(DEMO_PREGUNTAS);
       } else {
-        console.log(`✅ [ÉXITO] Se encontraron ${arrayPreguntas.length} preguntas en la base de datos.`);
-        setEstadoConexion('¡Datos cargados con éxito! ✅');
-        
-        // Mapeo adaptado al DTO
         const preguntasFormateadas = arrayPreguntas.map((p, index) => ({
           id: p.id || `pregunta-${index}`,
           orden: p.orden || (index + 1),
@@ -129,16 +100,12 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
         setPreguntas(preguntasFormateadas);
       }
     } catch (err) {
-      console.error('💥 [ERROR CATASTRÓFICO] Falló el fetch (red o CORS):', err.message);
-      setEstadoConexion('Fallo de red o servidor caído 💥');
-      console.warn('⚠️ Inyectando datos de demostración como fallback...');
+      console.error('Falló el fetch:', err.message);
       setPreguntas(DEMO_PREGUNTAS);
+      setPruebaIdReal('demo-prueba-001'); // fallback
     }
     
-    // Pequeño delay para que el usuario logre leer el estado (si quiere)
-    setTimeout(() => {
-      setFase('EN_PROGRESO');
-    }, 1500);
+    setFase('EN_PROGRESO');
   };
 
   /* ----------------------------------------------------------
@@ -206,17 +173,25 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
     console.log('📤 Respuestas enviadas:', JSON.stringify(payload, null, 2));
 
     try {
-      const resultado = await finalizarPrueba(pruebaId, payload);
-      onFinish(resultado);
+      const resultado = await finalizarPrueba(pruebaIdReal, payload);
+      // Combinamos el resultado del backend con las estadísticas locales
+      onFinish({
+        ...resultado,
+        totalRespondidas: respondidas,
+        totalPreguntas,
+        tiempoAgotado,
+      });
     } catch (err) {
       console.error('Error al enviar respuestas:', err);
       onFinish({
         totalRespondidas: respondidas,
         totalPreguntas,
         tiempoAgotado,
+        puntuacionDirecta: 'Error de red',
+        percentil: 'Error de red'
       });
     }
-  }, [enviando, respuestas, pruebaId, onFinish, respondidas, totalPreguntas, tiempoAgotado]);
+  }, [enviando, respuestas, pruebaIdReal, onFinish, respondidas, totalPreguntas, tiempoAgotado]);
 
   useEffect(() => {
     if (tiempoAgotado && !enviando) {
@@ -305,27 +280,7 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
     );
   }
 
-  /* ==========================================================
-     RENDER: Estado de Carga / Diagnóstico
-     ========================================================== */
-  if (fase === 'CARGANDO' || (fase === 'EN_PROGRESO' && preguntas.length === 0)) {
-    return (
-      <div className="instructions-wrapper">
-        <div className="instructions-card" style={{ textAlign: 'center', padding: '40px' }}>
-          <div className="loading-wrapper" style={{ marginBottom: '20px' }}>
-            <div className="spinner" />
-          </div>
-          <h2 style={{ color: '#0056b3', margin: '15px 0' }}>Diagnóstico de Red</h2>
-          <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#333' }}>
-            {estadoConexion}
-          </p>
-          <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '10px' }}>
-            Abre la consola de herramientas de desarrollo (F12) para ver los logs detallados.
-          </p>
-        </div>
-      </div>
-    );
-  }
+
 
   /* ==========================================================
      RENDER: Test en Progreso
@@ -450,6 +405,37 @@ export default function TestRazonamiento({ estudiante, pruebaId, onFinish }) {
             <div className="loading-wrapper">
               <div className="spinner" />
               <p>Cargando pregunta…</p>
+            </div>
+          </div>
+        )}
+
+        {/* --- Cajón de Navegación de Preguntas --- */}
+        {pregunta && (
+          <div className="question-nav-drawer">
+            <div className="question-nav-title">Navegación de Preguntas</div>
+            <div className="question-nav-grid" role="navigation" aria-label="Navegación de preguntas">
+              {preguntas.map((p, idx) => {
+                const isCurrent = idx === preguntaActual;
+                const isAnswered = respuestas[p.id] !== undefined;
+                
+                let btnClass = 'nav-grid-btn';
+                if (isCurrent) btnClass += ' current';
+                else if (isAnswered) btnClass += ' answered';
+
+                return (
+                  <button
+                    key={p.id}
+                    className={btnClass}
+                    onClick={() => setPreguntaActual(idx)}
+                    title={`Ir a pregunta ${idx + 1}`}
+                    type="button"
+                    aria-label={`Pregunta ${idx + 1}${isAnswered ? ' respondida' : ' sin responder'}`}
+                    aria-current={isCurrent ? 'step' : undefined}
+                  >
+                    {idx + 1}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
