@@ -2,10 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { finalizarPrueba, iniciarPrueba as apiIniciarPrueba } from '../services/api';
 import './TestRazonamiento.css';
 
-/* =============================================================
-   Datos de demostración del Test de Razonamiento Forma B (Q26–Q55).
-   Se usan SOLO cuando el backend no responde o no hay datos.
-   ============================================================= */
+// Datos de demostración del Test de Razonamiento Forma B (Q26–Q55).
+// Se usan SOLO cuando el backend no responde o no hay datos.
 const DEMO_PREGUNTAS = Array.from({ length: 30 }, (_, i) => ({
   id: `pregunta-${i + 1}`,
   orden: 26 + i,
@@ -199,9 +197,7 @@ export default function TestRazonamiento({ estudiante, onFinish }) {
     }
   }, [tiempoAgotado, enviando, enviarRespuestas]);
 
-  /* ==========================================================
-     RENDER: Pantalla de Instrucciones (Pre-Test)
-     ========================================================== */
+  /* --- Render: Pantalla de Instrucciones --- */
   if (fase === 'INSTRUCCIONES') {
     return (
       <div className="instructions-wrapper">
@@ -282,9 +278,7 @@ export default function TestRazonamiento({ estudiante, onFinish }) {
 
 
 
-  /* ==========================================================
-     RENDER: Test en Progreso
-     ========================================================== */
+  /* --- Render: Test en Progreso --- */
   return (
     <div className="test-wrapper">
       <div className="progress-bar-track" role="progressbar" aria-valuenow={respondidas} aria-valuemin={0} aria-valuemax={totalPreguntas}>
@@ -379,7 +373,7 @@ export default function TestRazonamiento({ estudiante, onFinish }) {
                 >
                   Siguiente
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m9 18-6-6-6-6" />
+                    <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </button>
               ) : (

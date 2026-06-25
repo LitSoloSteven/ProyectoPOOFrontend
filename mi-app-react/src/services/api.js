@@ -1,8 +1,7 @@
-/* =============================================================
-   API Service — Comunicación con OpenXava Backend
+/* --- API Service — Comunicación con OpenXava Backend ---
    Usa ruta relativa: el proxy de Vite redirige /ProyectoBackend
    al backend Tomcat en http://localhost:8080 automáticamente.
-   ============================================================= */
+   ------------------------------------------------------------- */
 
 const API_BASE = '/ProyectoBackend';
 

@@ -64,6 +64,7 @@ export default function Login({ onLoginSuccess }) {
     numeroCedula: '',
     tipoInstitucion: '',
     contrasena: '',
+    zona: '',
   });
 
   const handleChange = (campo, valor) => {
@@ -84,6 +85,7 @@ export default function Login({ onLoginSuccess }) {
       numeroCedula: '',
       tipoInstitucion: '',
       contrasena: '',
+      zona: '',
     });
     setPaso(2);
   };
@@ -98,21 +100,26 @@ export default function Login({ onLoginSuccess }) {
     e.preventDefault();
     setError('');
 
-    // Validaciones comunes compartidas por los 3 tipos de estudiantes
+    // Validaciones comunes
     if (rolSeleccionado !== 'evaluador') {
       if (!formData.nombres.trim()) { setError('Ingresa tus nombres completos.'); return; }
       if (!formData.fechaNacimiento) { setError('Selecciona tu fecha de nacimiento.'); return; }
       if (!formData.departamento.trim()) { setError('Ingresa tu departamento.'); return; }
       if (!formData.municipio.trim()) { setError('Ingresa tu municipio.'); return; }
       if (!formData.comunidad.trim()) { setError('Ingresa tu comunidad/barrio.'); return; }
+      if (!formData.zona) { setError('Selecciona tu zona (Rural o Urbana).'); return; }
     }
+
+    const regexCedula = /^\d{3}-\d{6}-\d{4}[A-Za-z]$/;
 
     // Validaciones específicas
     if (rolSeleccionado === 'universitario') {
       if (!/^\d{8}$/.test(formData.cif)) { setError('El CIF debe tener exactamente 8 dígitos.'); return; }
       if (!formData.numeroCedula.trim()) { setError('Ingresa tu número de cédula.'); return; }
+      if (!regexCedula.test(formData.numeroCedula)) { setError('Formato de cédula incorrecto. Ej: 001-080108-1047W'); return; }
     } else if (rolSeleccionado === 'egresado') {
       if (!formData.numeroCedula.trim()) { setError('Ingresa tu número de cédula.'); return; }
+      if (!regexCedula.test(formData.numeroCedula)) { setError('Formato de cédula incorrecto. Ej: 001-080108-1047W'); return; }
       if (!formData.tipoInstitucion) { setError('Selecciona el tipo de institución.'); return; }
     } else if (rolSeleccionado === 'secundaria') {
       if (!formData.tipoInstitucion) { setError('Selecciona el tipo de institución.'); return; }
@@ -135,6 +142,7 @@ export default function Login({ onLoginSuccess }) {
         departamento: formData.departamento,
         municipio: formData.municipio,
         comunidad: formData.comunidad,
+        zona: formData.zona,
       };
       if (rolSeleccionado === 'universitario') {
         payload = { ...payload, cif: formData.cif, numeroCedula: formData.numeroCedula };
@@ -213,7 +221,7 @@ export default function Login({ onLoginSuccess }) {
             )}
             <form className="login-form" onSubmit={handleSubmit}>
               
-              {/* === CAMPOS COMUNES PARA ESTUDIANTES === */}
+              {/* Sección: Campos comunes para estudiantes */}
               {rolSeleccionado !== 'evaluador' && (
                 <>
                   <div className="form-group">
@@ -234,14 +242,24 @@ export default function Login({ onLoginSuccess }) {
                       <input className="form-input" type="text" placeholder="Ej. Tipitapa" value={formData.municipio} onChange={(e) => handleChange('municipio', e.target.value)} />
                     </div>
                   </div>
-                  <div className="form-group">
-                    <label>Comunidad / Barrio</label>
-                    <input className="form-input" type="text" placeholder="Ej. Barrio Central" value={formData.comunidad} onChange={(e) => handleChange('comunidad', e.target.value)} />
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Comunidad / Barrio</label>
+                      <input className="form-input" type="text" placeholder="Ej. Barrio Central" value={formData.comunidad} onChange={(e) => handleChange('comunidad', e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label>Zona</label>
+                      <select className="form-select" value={formData.zona} onChange={(e) => handleChange('zona', e.target.value)}>
+                        <option value="">Seleccionar</option>
+                        <option value="RURAL">Rural</option>
+                        <option value="URBANA">Urbana</option>
+                      </select>
+                    </div>
                   </div>
                 </>
               )}
 
-              {/* === CAMPOS ESPECÍFICOS === */}
+              {/* Sección: Campos específicos por rol */}
               {rolSeleccionado === 'universitario' && (
                 <div className="form-row">
                   <div className="form-group">
